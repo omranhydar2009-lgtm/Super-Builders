@@ -1,0 +1,32 @@
+name: Global Telegram Messenger
+
+on:
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+
+jobs:
+  on-finished:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.name != 'Global Telegram Messenger'
+    steps:
+      - name: Send Notification
+        run: |
+          RESULT="${{ github.event.workflow_run.conclusion }}"
+          WF_NAME="${{ github.event.workflow_run.name }}"
+          WF_URL="${{ github.event.workflow_run.html_url }}"
+          REPO="${{ github.repository }}"
+          
+          if [ "$RESULT" = "success" ]; then
+            STATE="✅ Success"
+          else
+            STATE="❌ Failed"
+          fi
+          
+          MSG="*Build Status Update*%0A📌 Project: $WF_NAME%0A📊 Status: $STATE%0A📦 Repo: $REPO%0A🔗 [Details]($WF_URL)"
+          
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_TO }} \
+            -d text="$MSG" \
+            -d parse_mode="Markdown" \
+            -d disable_web_page_preview=true
